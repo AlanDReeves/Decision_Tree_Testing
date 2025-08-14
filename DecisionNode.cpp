@@ -1,6 +1,6 @@
 #include "DecisionNode.h"
 
-DecisionNode::DecisionNode(DecisionNode* left = NULL, DecisionNode* right = NULL, std::string feature = NULL, int threshold = NULL, int value = NULL) {
+DecisionNode::DecisionNode(DecisionNode* left, DecisionNode* right, std::string feature, int threshold, int value) {
     this->left = left;
     this->right = right;
     this->feature = feature;
@@ -8,16 +8,14 @@ DecisionNode::DecisionNode(DecisionNode* left = NULL, DecisionNode* right = NULL
     this->value = value;
 }
 
-DecisionNode::~DecisionNode() {
-    delete(this);
-}
-
 bool DecisionNode::setLeft(DecisionNode* node) {
     this->left = node;
+    return true;
 }
 
 bool DecisionNode::setRight(DecisionNode* node) {
-    this->right = right;
+    this->right = node;
+    return true;
 }
 
 DecisionNode* DecisionNode::getLeft() {

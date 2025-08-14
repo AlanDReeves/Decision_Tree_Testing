@@ -6,7 +6,7 @@ DecisionTree::DecisionTree(DecisionNode* root) {
 
 int DecisionTree::decide(int value) {
     DecisionNode* cursor = this->root;
-    while (cursor->getValue() != NULL) {
+    while (cursor->getValue() == -1) {
         int threshold = cursor->getThreshold();
         if (value <= threshold) {
             if (cursor->getLeft() != NULL) {
@@ -25,8 +25,4 @@ int DecisionTree::decide(int value) {
         }
     }
     return cursor->getValue();
-}
-
-DecisionTree::~DecisionTree() {
-    delete(this);
 }

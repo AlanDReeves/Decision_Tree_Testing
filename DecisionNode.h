@@ -11,8 +11,7 @@ private:
     int threshold; // if x less than threshold, go left, if more, go right
     int value; // represents the class prediction
 public:
-    DecisionNode(DecisionNode* left = NULL, DecisionNode* right = NULL, std::string feature = NULL, int threshold = NULL, int value = NULL);
-    ~DecisionNode();
+    DecisionNode(DecisionNode* left = NULL, DecisionNode* right = NULL, std::string feature = NULL, int threshold = -1, int value = -1);
 
     bool setLeft(DecisionNode* node);
     bool setRight(DecisionNode* node);

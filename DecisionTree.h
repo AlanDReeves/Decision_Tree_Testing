@@ -8,7 +8,6 @@ private:
     DecisionNode *root;
 public:
     DecisionTree(DecisionNode* root);
-    ~DecisionTree();
 
     int decide(int value);
 };
