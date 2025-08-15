@@ -5,7 +5,7 @@
 class ClassificationTree
 {
 private:
-    std::vector<std::pair<int, float>> scoreFeatures(std::vector<std::vector<int>> features, std::vector<int> results);
+    std::vector<std::tuple<int, float, int>> scoreFeatures(std::vector<std::vector<int>> features, std::vector<int> results);
     std::vector<std::pair<int, int>> getClassCounts(std::vector<int> results);
     float calcGini(std::vector<std::pair<int, int>> classCounts, std::vector<std::pair<int, int>> splitCounts);
 public:

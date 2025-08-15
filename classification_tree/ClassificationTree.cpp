@@ -1,6 +1,7 @@
 #include "ClassificationTree.h"
 #include<vector>
 #include<utility>
+#include<tuple>
 #include<cmath>
 
 #include<iostream>
@@ -9,7 +10,7 @@ ClassificationTree::ClassificationTree(std::vector<std::vector<int>> features, s
     int numPoints = features.size();
     int numFeatures = features[0].size();
     // find feature value that divides results most evenly
-    std::vector<std::pair<int, float>> featureScores = scoreFeatures(features, results);
+    std::vector<std::tuple<int, float, int>> featureScores = scoreFeatures(features, results);
 
     // create a node to divide input in half
     // find next best dividing feature and split on that
@@ -17,17 +18,17 @@ ClassificationTree::ClassificationTree(std::vector<std::vector<int>> features, s
     std::cout << "constructor complete" << std::endl;
 }
 
-std::vector<std::pair<int, float>> ClassificationTree::scoreFeatures(std::vector<std::vector<int>> features, std::vector<int> results) {
+std::vector<std::tuple<int, float, int>> ClassificationTree::scoreFeatures(std::vector<std::vector<int>> features, std::vector<int> results) {
     int numFeatures = features[0].size();
-    std::vector<std::pair<int, float>> vectorScores;
+    std::vector<std::tuple<int, float, int>> vectorScores; // {value to split on, gini score, feature number}
     for (int i = 0; i < numFeatures; i++) {// for each feature
             std::pair<std::vector<std::vector<int>>, std::vector<int>> sortResults = SortByFeature(features, i, results, 0, results.size());// sort by that feature
             std::vector<std::pair<int, int>> classCounts = getClassCounts(sortResults.second);// generate class counts
             std::pair<int, float> giniScore = findBestGiniVal(sortResults.first, i, sortResults.second, classCounts); // calculate best gini
-            vectorScores.push_back(giniScore); // place in vector
-            // find some way to include class value in this
-    return vectorScores; // return the vector
+            std::tuple<int, float, int> vectorTuple = std::make_tuple(giniScore.first, giniScore.second, i);
+            vectorScores.push_back(vectorTuple); // place in vector
     }
+    return vectorScores; // return the vector
 }
 
 std::vector<std::pair<int, int>> ClassificationTree::getClassCounts(std::vector<int> results) {
