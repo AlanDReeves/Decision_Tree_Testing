@@ -9,6 +9,7 @@ ClassificationTree::ClassificationTree(std::vector<std::vector<int>> features, s
     int numPoints = features.size();
     int numFeatures = features[0].size();
     // find feature value that divides results most evenly
+    std::vector<std::pair<int, float>> featureScores = scoreFeatures(features, results);
 
     // create a node to divide input in half
     // find next best dividing feature and split on that
@@ -16,26 +17,36 @@ ClassificationTree::ClassificationTree(std::vector<std::vector<int>> features, s
     std::cout << "constructor complete" << std::endl;
 }
 
-int ClassificationTree::findBestFeature(std::vector<std::vector<int>> features, std::vector<int> results) {
+std::vector<std::pair<int, float>> ClassificationTree::scoreFeatures(std::vector<std::vector<int>> features, std::vector<int> results) {
     int numFeatures = features[0].size();
-    // for each feature
-            // sort by that feature
-            // calculate best gini - must do this incrementally or efficiency is destroyed
-    // find the lowest gini score
-    // return the feature that gave that score
-    std::pair<std::vector<std::vector<int>>, std::vector<int>> sortedBest = SortByFeature(features, 0, results, 0, results.size());
-    float sortedBestScore = findBestGini();
-    int best = 0;
-    for (int i = 1; i < numFeatures; i++) {
-        std::pair<std::vector<std::vector<int>>, std::vector<int>> sortedNext = SortByFeature(features, i, results, 0, results.size());
-        float sortedNextScore = findBestGini();
-        if (sortedNextScore > sortedBestScore) {
-            sortedBest = sortedNext;
-            sortedBestScore = sortedNextScore;
-            best = i;
-        }
+    std::vector<std::pair<int, float>> vectorScores;
+    for (int i = 0; i < numFeatures; i++) {// for each feature
+            std::pair<std::vector<std::vector<int>>, std::vector<int>> sortResults = SortByFeature(features, i, results, 0, results.size());// sort by that feature
+            std::vector<std::pair<int, int>> classCounts = getClassCounts(sortResults.second);// generate class counts
+            std::pair<int, float> giniScore = findBestGiniVal(sortResults.first, i, sortResults.second, classCounts); // calculate best gini
+            vectorScores.push_back(giniScore); // place in vector
+            // find some way to include class value in this
+    return vectorScores; // return the vector
     }
-    return best;
+}
+
+std::vector<std::pair<int, int>> ClassificationTree::getClassCounts(std::vector<int> results) {
+    std::vector<std::pair<int, int>> classCounts;
+    for (int i = 0; i < results.size(); i++) {
+        int classVal = results[i];
+        bool found = false;
+        for (int j = 0; j < classCounts.size(); j++) {
+            if (classCounts[j].first == classVal) {
+                classCounts[j].second++;
+                found = true;
+            }
+        }
+        if (!found) {
+            classCounts.push_back(std::make_pair(classVal, 1));
+        }
+        found = false;
+    }
+    return classCounts;
 }
 
 std::pair<std::vector<std::vector<int>>, std::vector<int>> ClassificationTree::SortByFeature(
@@ -104,7 +115,7 @@ float ClassificationTree::calcGini(std::vector<std::pair<int, int>> classCounts,
     return leftPi + rightPi;
 }
 
-int ClassificationTree::findBestGiniVal(std::vector<std::vector<int>> sortedFeatures, int featureNum, std::vector<int> sortedResults, std::vector<std::pair<int, int>> classCounts) {
+std::pair<int, float> ClassificationTree::findBestGiniVal(std::vector<std::vector<int>> sortedFeatures, int featureNum, std::vector<int> sortedResults, std::vector<std::pair<int, int>> classCounts) {
     // initialize starting gini score and feature value
     float bestGini = 999.0;
     int bestValue = -999;
@@ -137,9 +148,5 @@ int ClassificationTree::findBestGiniVal(std::vector<std::vector<int>> sortedFeat
         }
     }
     // return feature value at best split
-    return bestValue;
+    return std::make_pair(bestValue, bestGini);
 }
-
-
-
-
