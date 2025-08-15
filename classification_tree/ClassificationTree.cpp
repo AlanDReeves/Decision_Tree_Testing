@@ -1,41 +1,96 @@
 #include "ClassificationTree.h"
+#include "ClassificationNode.h"
 #include<vector>
 #include<utility>
 #include<tuple>
 #include<cmath>
+#include<set>
 
 #include<iostream>
 
 ClassificationTree::ClassificationTree(std::vector<std::vector<int>> features, std::vector<int> results) {
     std::cout << "constructor called" << std::endl;
-    int numPoints = features.size();
     int numFeatures = features[0].size();
-    // find feature value that divides results most evenly
-    std::cout << "calling scoreFeatures" << std::endl;
-    std::vector<std::tuple<int, float, int>> featureScores = scoreFeatures(features, results);
-    std::cout << "scoreFeatures returned" << std::endl;
+    std::set<int> featuresUsed;
+    int size = results.size();
 
-    for (std::tuple<int, float, int> score : featureScores) {
-        std::cout << std::get<2>(score) << " " << std::get<1>(score) << std::endl;
-    }
+    root = makeTree(features, results, featuresUsed, 0, size);
 
-    // create a node to divide input in half
-    // find next best dividing feature and split on that
-    // repeat until all features are used
     std::cout << "constructor complete" << std::endl;
 }
 
-std::vector<std::tuple<int, float, int>> ClassificationTree::scoreFeatures(std::vector<std::vector<int>> features, std::vector<int> results) {
+ClassificationNode ClassificationTree::makeTree(
+    std::vector<std::vector<int>>& features, 
+    std::vector<int>& results, 
+    std::set<int> featuresUsed, 
+    int leftIndex, 
+    int rightIndex) {
+        int numFeatures = features.size();
+        if (featuresUsed.size() == numFeatures) { // if all features have been used
+            return nullptr; // return early, base case
+        }
+
+        // else, find the best feature to split the data set
+        std::vector<std::tuple<int, float, int, int>> featureScores = scoreFeatures(features, results, featuresUsed);
+        // featureScores - vector{bestValue, bestGini, featureNumber, bestIndex}
+        int bestValueNum = -1;
+        int bestGini = 1000; // arbitrary high number one worse than the fail number in gini calculation func
+        int bestFeatureNum = -1;
+        int bestIndex = -1;
+        
+        for (int i = 0; i < numFeatures; i++) {
+            if (std::get<1>(featureScores[i]) < bestGini) {
+                bestValueNum = std::get<0>(featureScores[i]);
+                bestGini = std::get<0>(featureScores[i]);
+                bestFeatureNum = std::get<2>(featureScores[i]);
+                bestIndex = std::get<3>(featureScores[i]);
+            }
+        }
+
+        // make a node that represents splitting at this feature
+        ClassificationNode root = new ClassificationNode(nullptr, nullptr, bestFeatureNum, bestValueNum, -1);
+        // null left, null right, feature = bestFeatureNum, threshold = bestFeatureNum, prediction value = -1 (sentinel)
+        featuresUsed.insert(bestFeatureNum); // include bestFeatureNum so it isn't included in future calculations
+
+        ClassificationNode leftChild = makeTree(
+            features, 
+            results,
+            featuresUsed,
+            leftIndex,
+            bestIndex
+        );
+        ClassificationNode rightChild = makeTree(
+            features,
+            results,
+            featuresUsed,
+            bestIndex,
+            rightIndex
+        );
+
+        root.setLeft(&leftChild);
+        root.setRight(&rightChild);
+
+        return root;
+}
+
+std::vector<std::tuple<int, float, int, int>> ClassificationTree::scoreFeatures(std::vector<std::vector<int>>& features, std::vector<int>& results, std::set<int>& featuresUsed) {
     int numFeatures = int(features[0].size());
     std::cout << "scoreFeatures called numFeatures: ";
     std::cout << numFeatures << std::endl;
-    std::vector<std::tuple<int, float, int>> vectorScores; // {value to split on, gini score, feature number}
+    std::vector<std::tuple<int, float, int, int>> vectorScores; // {value to split on, gini score, feature number, splitIndex}
     for (int i = 0; i < numFeatures; i++) {// for each feature
+            if (featuresUsed.count(i) != 0) {
+                std::tuple<int, float, int, int> junkTuple = std::make_tuple(-1, 999, -1, -1);
+                vectorScores.push_back(junkTuple); // push a tuple with a gini score so bad it will not be selected
+            }
             std::cout << "scoreFeatures loop: i = " << i << std::endl;
             std::pair<std::vector<std::vector<int>>, std::vector<int>> sortResults = SortByFeature(features, i, results, 0, results.size() - 1);// sort by that feature
             std::vector<std::pair<int, int>> classCounts = getClassCounts(sortResults.second);// generate class counts
-            std::pair<int, float> giniScore = findBestGiniVal(sortResults.first, i, sortResults.second, classCounts); // calculate best gini
-            std::tuple<int, float, int> vectorTuple = std::make_tuple(giniScore.first, giniScore.second, i);
+            std::tuple<int, float, int> giniScore = findBestGiniVal(sortResults.first, i, sortResults.second, classCounts); // calculate best gini
+            // giniScore tuple - {bestValue, bestGini, bestIndex}
+
+            std::tuple<int, float, int, int> vectorTuple = std::make_tuple(std::get<0>(giniScore), std::get<1>(giniScore), i, std::get<3>(giniScore));
+            // vectorTuple - {bestValue, bestGini, featureNumber, bestIndex}
             vectorScores.push_back(vectorTuple); // place in vector
     }
     return vectorScores; // return the vector
@@ -136,10 +191,11 @@ float ClassificationTree::calcGini(std::vector<std::pair<int, int>> classCounts,
     return leftPi + rightPi;
 }
 
-std::pair<int, float> ClassificationTree::findBestGiniVal(std::vector<std::vector<int>> sortedFeatures, int featureNum, std::vector<int> sortedResults, std::vector<std::pair<int, int>> classCounts) {
+std::tuple<int, float, int> ClassificationTree::findBestGiniVal(std::vector<std::vector<int>> sortedFeatures, int featureNum, std::vector<int> sortedResults, std::vector<std::pair<int, int>> classCounts) {
     // initialize starting gini score and feature value
     float bestGini = 999.0;
     int bestValue = -999;
+    int bestIndex = -1;
 
     // set up class split counts for iterative Gini counting
         std::vector<std::pair<int, int>> splitCounts;
@@ -168,9 +224,10 @@ std::pair<int, float> ClassificationTree::findBestGiniVal(std::vector<std::vecto
                 // record best score and value at best score
                 bestGini = splitGini;
                 bestValue = sortedFeatures[i][featureNum];
+                bestIndex = i;
             }
         }
     }
     // return feature value at best split
-    return std::make_pair(bestValue, bestGini);
+    return std::make_tuple(bestValue, bestGini, bestIndex);
 }

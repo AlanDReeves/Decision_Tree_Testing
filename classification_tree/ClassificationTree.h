@@ -1,11 +1,13 @@
 #ifndef CLASSTREE
 #define CLASSTREE
-#include <vector>
+#include<vector>
+#include<set>
+#include "ClassificationNode.h"
 
 class ClassificationTree
 {
 private:
-    
+    ClassificationNode root;
 public:
     ClassificationTree(std::vector<std::vector<int>> features, std::vector<int> results);
 
@@ -16,10 +18,17 @@ public:
     int left,
     int right);
 
-    std::vector<std::tuple<int, float, int>> scoreFeatures(std::vector<std::vector<int>> features, std::vector<int> results);
+    std::vector<std::tuple<int, float, int, int>> scoreFeatures(std::vector<std::vector<int>>& features, std::vector<int>& results, std::set<int>& featuresUsed);
     std::vector<std::pair<int, int>> getClassCounts(std::vector<int> results);
     float calcGini(std::vector<std::pair<int, int>> classCounts, std::vector<std::pair<int, int>> splitCounts);
 
-    std::pair<int, float> findBestGiniVal(std::vector<std::vector<int>> sortedFeatures, int featureNum, std::vector<int> sortedResults, std::vector<std::pair<int, int>> classCounts);
+    std::tuple<int, float, int> findBestGiniVal(std::vector<std::vector<int>> sortedFeatures, int featureNum, std::vector<int> sortedResults, std::vector<std::pair<int, int>> classCounts);
+
+    ClassificationNode makeTree(
+    std::vector<std::vector<int>>& features, 
+    std::vector<int>& results, 
+    std::set<int> featuresUsed, 
+    int leftIndex, 
+    int rightIndex);
 };
 #endif
