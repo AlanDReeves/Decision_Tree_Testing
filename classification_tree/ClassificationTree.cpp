@@ -7,10 +7,17 @@
 #include<iostream>
 
 ClassificationTree::ClassificationTree(std::vector<std::vector<int>> features, std::vector<int> results) {
+    std::cout << "constructor called" << std::endl;
     int numPoints = features.size();
     int numFeatures = features[0].size();
     // find feature value that divides results most evenly
+    std::cout << "calling scoreFeatures" << std::endl;
     std::vector<std::tuple<int, float, int>> featureScores = scoreFeatures(features, results);
+    std::cout << "scoreFeatures returned" << std::endl;
+
+    for (std::tuple<int, float, int> score : featureScores) {
+        std::cout << std::get<2>(score) << " " << std::get<1>(score) << std::endl;
+    }
 
     // create a node to divide input in half
     // find next best dividing feature and split on that
@@ -19,10 +26,13 @@ ClassificationTree::ClassificationTree(std::vector<std::vector<int>> features, s
 }
 
 std::vector<std::tuple<int, float, int>> ClassificationTree::scoreFeatures(std::vector<std::vector<int>> features, std::vector<int> results) {
-    int numFeatures = features[0].size();
+    int numFeatures = int(features[0].size());
+    std::cout << "scoreFeatures called numFeatures: ";
+    std::cout << numFeatures << std::endl;
     std::vector<std::tuple<int, float, int>> vectorScores; // {value to split on, gini score, feature number}
     for (int i = 0; i < numFeatures; i++) {// for each feature
-            std::pair<std::vector<std::vector<int>>, std::vector<int>> sortResults = SortByFeature(features, i, results, 0, results.size());// sort by that feature
+            std::cout << "scoreFeatures loop: i = " << i << std::endl;
+            std::pair<std::vector<std::vector<int>>, std::vector<int>> sortResults = SortByFeature(features, i, results, 0, results.size() - 1);// sort by that feature
             std::vector<std::pair<int, int>> classCounts = getClassCounts(sortResults.second);// generate class counts
             std::pair<int, float> giniScore = findBestGiniVal(sortResults.first, i, sortResults.second, classCounts); // calculate best gini
             std::tuple<int, float, int> vectorTuple = std::make_tuple(giniScore.first, giniScore.second, i);
@@ -33,10 +43,12 @@ std::vector<std::tuple<int, float, int>> ClassificationTree::scoreFeatures(std::
 
 std::vector<std::pair<int, int>> ClassificationTree::getClassCounts(std::vector<int> results) {
     std::vector<std::pair<int, int>> classCounts;
-    for (int i = 0; i < results.size(); i++) {
+    int resultsSize = int(results.size());
+    for (int i = 0; i < resultsSize; i++) {
         int classVal = results[i];
         bool found = false;
-        for (int j = 0; j < classCounts.size(); j++) {
+        int classCountsSize = int(classCounts.size());
+        for (int j = 0; j < classCountsSize; j++) {
             if (classCounts[j].first == classVal) {
                 classCounts[j].second++;
                 found = true;
@@ -51,14 +63,15 @@ std::vector<std::pair<int, int>> ClassificationTree::getClassCounts(std::vector<
 }
 
 std::pair<std::vector<std::vector<int>>, std::vector<int>> ClassificationTree::SortByFeature(
-    std::vector<std::vector<int>> features, 
+    std::vector<std::vector<int>>& features, 
     int featureNum, 
-    std::vector<int> results,
+    std::vector<int>& results,
     int left,
     int right) {
     // Quick sort by feature
-    std::cout << "Sort By Feature called" << std::endl;
-
+    
+    std::cout << "SortByFeature called" << std::endl;
+    std::cout<< "left: " << left << " right: " << right << std::endl;
     if (left >= right) {
         return {features, results};
     }
@@ -71,6 +84,9 @@ std::pair<std::vector<std::vector<int>>, std::vector<int>> ClassificationTree::S
     int endLowIndex = left - 1; // highest index of low size
     int i;
     for (i = left; i < right; i++) { // check all values besides pivot
+
+          std::cout << "inside loop i = " << i << " left = " << left << " right = " << right << std::endl;
+
         if (features[i][featureNum] <= pivot) { // if the val belongs on low side
             endLowIndex += 1; // increase size of low side
             tempFeatures = features[i]; // swap new element into low size
@@ -95,17 +111,21 @@ std::pair<std::vector<std::vector<int>>, std::vector<int>> ClassificationTree::S
 
     std::cout << "Partition made" << std::endl;
 
+    std::cout << "recursive call reached" << std::endl;
+
     // quicksort recursively
     ClassificationTree::SortByFeature(features, featureNum, results, left, pivotLocation - 1);
     ClassificationTree::SortByFeature(features, featureNum, results, pivotLocation + 1, right);
     
+    std::cout<< "SortByFeature complete" << std::endl;
     return {features, results};
 }
 
 float ClassificationTree::calcGini(std::vector<std::pair<int, int>> classCounts, std::vector<std::pair<int, int>> splitCounts) {
     float leftPi = 0;
     float rightPi = 0;
-    for (int i = 0; i < splitCounts.size(); i++) {
+    int splitCountsSize = int(splitCounts.size());
+    for (int i = 0; i < splitCountsSize; i++) {
         int leftCount = splitCounts[i].second;
         int totalCount = classCounts[i].second;
         int rightCount = totalCount - leftCount;
@@ -123,15 +143,18 @@ std::pair<int, float> ClassificationTree::findBestGiniVal(std::vector<std::vecto
 
     // set up class split counts for iterative Gini counting
         std::vector<std::pair<int, int>> splitCounts;
-        for (int i = 0; i < classCounts.size(); i++) {
+        int classCountsSize = int(classCounts.size());
+        for (int i = 0; i < classCountsSize; i++) {
             int cls = classCounts[i].first;
             splitCounts.push_back(std::make_pair(cls, 0)); // start counts for all classes at 0
         }
     // iterate through feature values for featureNum
-    for (int i = 1; i < sortedResults.size(); i++) {
+    int sortedResultsSize = int(sortedResults.size());
+    int splitCountsSize = int(splitCounts.size());
+    for (int i = 1; i < sortedResultsSize; i++) {
         // add each class passed to class count
         int classSeen = sortedResults[i];
-        for (int i = 0; i < splitCounts.size(); i++) { // iterating through to find class values in case they do not match index
+        for (int i = 0; i < splitCountsSize; i++) { // iterating through to find class values in case they do not match index
             if (splitCounts[i].first == classSeen) {
                 splitCounts[i].second++;
             }
