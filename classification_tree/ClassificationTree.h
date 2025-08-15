@@ -5,7 +5,7 @@
 class ClassificationTree
 {
 private:
-    int findBestFeature();
+    int findBestFeature(std::vector<std::vector<int>> features, std::vector<int> results);
     float calcGini();
 public:
     ClassificationTree(std::vector<std::vector<int>> features, std::vector<int> results);
@@ -17,6 +17,7 @@ public:
     int left,
     int right);
 
-    float calcGini(std::vector<int> sortedResults);
+    float calcGini(std::vector<std::pair<int, int>> classCounts, std::vector<std::pair<int, int>> splitCounts);
+    int findBestGiniVal(std::vector<std::vector<int>> sortedFeatures, int featureNum, std::vector<int> sortedResults, std::vector<std::pair<int, int>> classCounts);
 };
 #endif
