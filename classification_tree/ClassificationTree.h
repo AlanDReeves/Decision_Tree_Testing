@@ -2,12 +2,13 @@
 #define CLASSTREE
 #include<vector>
 #include<set>
+#include<tuple>
 #include "ClassificationNode.h"
 
 class ClassificationTree
 {
 private:
-    ClassificationNode root;
+    ClassificationNode* root;
 public:
     ClassificationTree(std::vector<std::vector<int>> features, std::vector<int> results);
 
@@ -24,11 +25,12 @@ public:
 
     std::tuple<int, float, int> findBestGiniVal(std::vector<std::vector<int>> sortedFeatures, int featureNum, std::vector<int> sortedResults, std::vector<std::pair<int, int>> classCounts);
 
-    ClassificationNode makeTree(
+    ClassificationNode* makeTree(
     std::vector<std::vector<int>>& features, 
     std::vector<int>& results, 
     std::set<int> featuresUsed, 
     int leftIndex, 
     int rightIndex);
+    ClassificationNode* getRoot();
 };
 #endif

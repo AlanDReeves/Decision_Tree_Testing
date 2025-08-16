@@ -1,11 +1,11 @@
-#include<ClassificationNode.h>
+#include"ClassificationNode.h"
 
 ClassificationNode::ClassificationNode(
-    ClassificationNode* left = nullptr, 
-    ClassificationNode* right = nullptr, 
-    int featureNumber = -1, 
-    int threshold = -1, 
-    int value = -1) {
+    ClassificationNode* left, 
+    ClassificationNode* right, 
+    int featureNumber, 
+    int threshold, 
+    int value) {
         this->left = left;
         this->right = right;
         this->featureNumber = featureNumber;
