@@ -4,29 +4,29 @@
 #include<utility>
 #include<iostream>
 
-void printInorder(ClassificationNode* node) {
+void printTopDown(ClassificationNode* node) {
     if (node == nullptr) {
         return;
     }
     if (node->getLeft() == nullptr && node->getRight() == nullptr) {
-        std::cout<< "feature: " << node->getFeatureNum() << " threshold " << node->getThreshold() << std::endl;
+        std::cout<< "prediction: " << node->getValue() << std::endl;
         return;
     }
-    printInorder((node->getLeft()));
     std::cout<< "feature: " << node->getFeatureNum() << " threshold " << node->getThreshold() << std::endl;
-    printInorder((node->getRight()));
+    printTopDown((node->getLeft()));
+    printTopDown((node->getRight()));
 }
 
 int main() {
     std::vector<std::vector<int>> features = {
-        {1, 50},
-        {2, 51},
-        {3, 52},
-        {4, 60},
-        {5, 69}
+        {1, 50, 3},
+        {2, 51, 51},
+        {3, 52, 90},
+        {4, 60, 50},
+        {5, 69, 99}
     };
 
-    std::vector<int> results = {1, 1, 1, 2, 2};
+    std::vector<int> results = {1, 1, 3, 2, 2};
 
     ClassificationTree testTree = ClassificationTree(features, results);
 
@@ -35,7 +35,7 @@ int main() {
     std::cout << "Tree structure inorder walk" << std::endl;
 
     ClassificationNode* cursor = testTree.getRoot();
-    printInorder(cursor);
+    printTopDown(cursor);
     
 
     return 1;

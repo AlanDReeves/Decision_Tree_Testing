@@ -32,5 +32,13 @@ public:
     int leftIndex, 
     int rightIndex);
     ClassificationNode* getRoot();
+
+    void makePredictionNodes(
+    std::vector<std::vector<int>>& features, 
+    std::vector<int>& results, 
+    int leftIndex, 
+    int bestIndex,
+    int rightIndex,
+    ClassificationNode* node);
 };
 #endif

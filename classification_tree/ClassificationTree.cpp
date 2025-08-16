@@ -5,6 +5,7 @@
 #include<tuple>
 #include<cmath>
 #include<set>
+#include<unordered_map>
 
 #include<iostream>
 
@@ -32,10 +33,6 @@ ClassificationNode* ClassificationTree::makeTree(
             std::cout<< "reached all features used base case" << std::endl;
             return nullptr; // return early, base case
         }
-        if (leftIndex >= rightIndex) {
-            std::cout<< "reached left/right base case" << std::endl;
-            return nullptr;
-        }
 
         // else, find the best feature to split the data set
         std::vector<std::tuple<int, float, int, int>> featureScores = scoreFeatures(features, results, featuresUsed);
@@ -61,20 +58,29 @@ ClassificationNode* ClassificationTree::makeTree(
         // null left, null right, feature = bestFeatureNum, threshold = bestFeatureNum, prediction value = -1 (sentinel)
         featuresUsed.insert(bestFeatureNum); // include bestFeatureNum so it isn't included in future calculations
 
-        root->setLeft(makeTree(
-            features, 
-            results,
-            featuresUsed,
-            leftIndex,
-            bestIndex
-        ));
-        root->setRight(makeTree(
-            features,
-            results,
-            featuresUsed,
-            bestIndex,
-            rightIndex
-        ));
+        // if all features used now
+        if (int(featuresUsed.size()) == numFeatures) {
+            // make prediction nodes
+            makePredictionNodes(features, results, leftIndex, bestIndex, rightIndex, root);
+            // this sets left and right
+            // base case still triggers
+        }
+        else { // set left and right with decision nodes for the next feature
+            root->setLeft(makeTree(
+                features, 
+                results,
+                featuresUsed,
+                leftIndex,
+                bestIndex
+            ));
+            root->setRight(makeTree(
+                features,
+                results,
+                featuresUsed,
+                bestIndex,
+                rightIndex
+            ));
+        }
         return root;
 }
 
@@ -241,3 +247,57 @@ std::tuple<int, float, int> ClassificationTree::findBestGiniVal(std::vector<std:
 ClassificationNode* ClassificationTree::getRoot() {
     return root;
 }
+
+void ClassificationTree::makePredictionNodes(
+    std::vector<std::vector<int>>& features, 
+    std::vector<int>& results, 
+    int leftIndex, 
+    int bestIndex,
+    int rightIndex,
+    ClassificationNode* node)
+    {
+        // determine most common results val left of split
+        std::unordered_map<int, int> leftCounts = std::unordered_map<int, int>();
+        for (int i = leftIndex; i < bestIndex; i++) {
+            int classSeen = results[i];
+            if (leftCounts.count(classSeen) == 0) {
+                leftCounts[classSeen] = 1;
+            } else {
+                leftCounts[classSeen] += 1;
+            }
+        }
+        int mostLeftClass = -1;
+        int leftClassCount = 0;
+        for (const auto& pair : leftCounts) {
+            if (pair.second > leftClassCount) {
+                mostLeftClass = pair.first;
+                leftClassCount = pair.second;
+            }
+        }
+
+        // determine most common results val right of split
+        std::unordered_map<int, int> rightCounts = std::unordered_map<int, int>();
+        for (int i = bestIndex; i <= rightIndex; i++) {
+            int classSeen = results[i];
+            if (rightCounts.count(classSeen) == 0) {
+                rightCounts[classSeen] = 1;
+            } else {
+                rightCounts[classSeen] += 1;
+            }
+        }
+        int mostRightClass = -1;
+        int rightClassCount = 0;
+        for (const auto& pair : rightCounts) {
+            if (pair.second > rightClassCount) {
+                mostRightClass = pair.first;
+                rightClassCount = pair.second;
+            }
+        }
+
+        // create prediction nodes
+        ClassificationNode* leftPred = new ClassificationNode(nullptr, nullptr, -1, -1, mostLeftClass);
+        ClassificationNode* rightPred = new ClassificationNode(nullptr, nullptr, -1, -1, mostRightClass);
+
+        node->setLeft(leftPred);
+        node->setRight(rightPred);
+    }
