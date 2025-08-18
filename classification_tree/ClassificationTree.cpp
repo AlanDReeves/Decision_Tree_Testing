@@ -20,6 +20,10 @@ ClassificationTree::ClassificationTree(std::vector<std::vector<int>> features, s
     std::cout << "constructor complete" << std::endl;
 }
 
+int ClassificationTree::predict(std::vector<int>) {
+
+}
+
 ClassificationNode* ClassificationTree::makeTree(
     std::vector<std::vector<int>>& features, 
     std::vector<int>& results, 
@@ -35,10 +39,11 @@ ClassificationNode* ClassificationTree::makeTree(
         }
 
         // else, find the best feature to split the data set
-        std::vector<std::tuple<int, float, int, int>> featureScores = scoreFeatures(features, results, featuresUsed);
+        std::vector<std::tuple<int, float, int, int>> featureScores = scoreFeatures(features, results, featuresUsed, leftIndex, rightIndex);
+        // calculating bestIndex incorrectly?
         // featureScores - vector{bestValue, bestGini, featureNumber, bestIndex}
         int bestValueNum = -1;
-        int bestGini = 1000; // arbitrary high number one worse than the fail number in gini calculation func
+        float bestGini = 1000; // arbitrary high number one worse than the fail number in gini calculation func
         int bestFeatureNum = -1;
         int bestIndex = -1;
         
@@ -51,7 +56,16 @@ ClassificationNode* ClassificationTree::makeTree(
             }
         }
 
+        // re-sort based on best feature. TODO: Find a more efficient way to do this in the future
+        std::pair<std::vector<std::vector<int>>, std::vector<int>> sorted = SortByFeature(features, bestFeatureNum, results, leftIndex, rightIndex);
+
         std::cout<< "Best feature found to be " << bestFeatureNum << std::endl;
+
+        if (bestIndex == -1 || bestFeatureNum == -1) {
+            // base case - no further split is viable
+            ClassificationNode* leaf = makeSinglePredictionNode(sorted.first, sorted.second, leftIndex, rightIndex);
+            return leaf;
+        }
 
         // make a node that represents splitting at this feature
         ClassificationNode* root = new ClassificationNode(nullptr, nullptr, bestFeatureNum, bestValueNum, -1);
@@ -61,20 +75,20 @@ ClassificationNode* ClassificationTree::makeTree(
         // if all features used now
         if (int(featuresUsed.size()) == numFeatures) {
             // make prediction nodes
-            makePredictionNodes(features, results, leftIndex, bestIndex, rightIndex, root);
+            makePredictionNodes(sorted.first, sorted.second, leftIndex, bestIndex, rightIndex, root);
             // this sets left and right
             // base case still triggers
         }
         else { // set left and right with decision nodes for the next feature
             root->setLeft(makeTree(
-                features, 
+                sorted.first, 
                 results,
                 featuresUsed,
                 leftIndex,
                 bestIndex
             ));
             root->setRight(makeTree(
-                features,
+                sorted.first,
                 results,
                 featuresUsed,
                 bestIndex,
@@ -84,7 +98,15 @@ ClassificationNode* ClassificationTree::makeTree(
         return root;
 }
 
-std::vector<std::tuple<int, float, int, int>> ClassificationTree::scoreFeatures(std::vector<std::vector<int>>& features, std::vector<int>& results, std::set<int>& featuresUsed) {
+std::vector<std::tuple<int, float, int, int>> ClassificationTree::scoreFeatures(
+    std::vector<std::vector<int>>& features, 
+    std::vector<int>& results, 
+    std::set<int>& featuresUsed, 
+    int leftIndex, 
+    int rightIndex) {
+
+    // TODO: make this return the sorted array, too
+
     int numFeatures = int(features[0].size());
     std::cout << "scoreFeatures called numFeatures: ";
     std::cout << numFeatures << std::endl;
@@ -97,7 +119,7 @@ std::vector<std::tuple<int, float, int, int>> ClassificationTree::scoreFeatures(
                 std::cout << "scoreFeatures loop: i = " << i << std::endl;
                 std::pair<std::vector<std::vector<int>>, std::vector<int>> sortResults = SortByFeature(features, i, results, 0, results.size() - 1);// sort by that feature
                 std::vector<std::pair<int, int>> classCounts = getClassCounts(sortResults.second);// generate class counts
-                std::tuple<int, float, int> giniScore = findBestGiniVal(sortResults.first, i, sortResults.second, classCounts); // calculate best gini
+                std::tuple<int, float, int> giniScore = findBestGiniVal(sortResults.first, i, sortResults.second, classCounts, leftIndex, rightIndex); // calculate best gini
                 // giniScore tuple - {bestValue, bestGini, bestIndex}
 
                 std::tuple<int, float, int, int> vectorTuple = std::make_tuple(std::get<0>(giniScore), std::get<1>(giniScore), i, std::get<2>(giniScore));
@@ -203,7 +225,14 @@ float ClassificationTree::calcGini(std::vector<std::pair<int, int>> classCounts,
     return leftPi + rightPi;
 }
 
-std::tuple<int, float, int> ClassificationTree::findBestGiniVal(std::vector<std::vector<int>> sortedFeatures, int featureNum, std::vector<int> sortedResults, std::vector<std::pair<int, int>> classCounts) {
+std::tuple<int, float, int> ClassificationTree::findBestGiniVal(
+    std::vector<std::vector<int>> sortedFeatures, 
+    int featureNum, 
+    std::vector<int> sortedResults, 
+    std::vector<std::pair<int, int>> classCounts,
+    int leftIndex,
+    int rightIndex) {
+    
     // initialize starting gini score and feature value
     float bestGini = 999.0;
     int bestValue = -999;
@@ -217,14 +246,17 @@ std::tuple<int, float, int> ClassificationTree::findBestGiniVal(std::vector<std:
             splitCounts.push_back(std::make_pair(cls, 0)); // start counts for all classes at 0
         }
     // iterate through feature values for featureNum
-    int sortedResultsSize = int(sortedResults.size());
+    int splitSize = rightIndex - leftIndex + 1;
     int splitCountsSize = int(splitCounts.size());
-    for (int i = 1; i < sortedResultsSize; i++) {
+
+    for (int i = leftIndex + 1; i < rightIndex + 1; i++) {
+        // TODO: this does not consider not splitting at all. Fix that when able
+
         // add each class passed to class count
         int classSeen = sortedResults[i];
-        for (int i = 0; i < splitCountsSize; i++) { // iterating through to find class values in case they do not match index
-            if (splitCounts[i].first == classSeen) {
-                splitCounts[i].second++;
+        for (int j = 0; j < splitCountsSize; j++) { // iterating through to find class values in case they do not match index
+            if (splitCounts[j].first == classSeen) {
+                splitCounts[j].second++;
             }
         }
 
@@ -241,6 +273,7 @@ std::tuple<int, float, int> ClassificationTree::findBestGiniVal(std::vector<std:
         }
     }
     // return feature value at best split
+    std::cout << "feature number: " << featureNum << " best gini score: " << bestGini << std::endl;
     return std::make_tuple(bestValue, bestGini, bestIndex);
 }
 
@@ -256,6 +289,8 @@ void ClassificationTree::makePredictionNodes(
     int rightIndex,
     ClassificationNode* node)
     {
+        // Need to pass this a features array sorted by the final feature
+        std::cout << "makePredictionNodes called: leftIndex: " << leftIndex << " bestIndex: " << bestIndex << " rightIndex: " << rightIndex << std::endl;
         // determine most common results val left of split
         std::unordered_map<int, int> leftCounts = std::unordered_map<int, int>();
         for (int i = leftIndex; i < bestIndex; i++) {
@@ -294,10 +329,44 @@ void ClassificationTree::makePredictionNodes(
             }
         }
 
+        std::cout << "mostLeftClass: " << mostLeftClass << " mostRightClass: " << mostRightClass << std::endl;
+
         // create prediction nodes
         ClassificationNode* leftPred = new ClassificationNode(nullptr, nullptr, -1, -1, mostLeftClass);
         ClassificationNode* rightPred = new ClassificationNode(nullptr, nullptr, -1, -1, mostRightClass);
 
         node->setLeft(leftPred);
         node->setRight(rightPred);
-    }
+}
+
+ClassificationNode* ClassificationTree::makeSinglePredictionNode(
+    std::vector<std::vector<int>>& features, 
+    std::vector<int>& results, 
+    int leftIndex, 
+    int rightIndex) {
+        std::cout << "makeSinglePredictionNode called: leftIndex: " << leftIndex  << " rightIndex: " << rightIndex << std::endl;
+        // determine most common results val in split
+        std::unordered_map<int, int> counts = std::unordered_map<int, int>();
+        for (int i = leftIndex; i < rightIndex + 1; i++) {
+            int classSeen = results[i];
+            std::cout << classSeen;
+            if (counts.count(classSeen) == 0) {
+                counts[classSeen] = 1;
+            } else {
+                counts[classSeen] += 1;
+            }
+        }
+        std::cout << std::endl;
+        int mostClass = -1;
+        int mostClassCount = 0;
+        for (const auto& pair : counts) {
+            if (pair.second > mostClassCount) {
+                mostClass = pair.first;
+                mostClassCount = pair.second;
+            }
+        }
+
+    ClassificationNode* decisionNode = new ClassificationNode(nullptr, nullptr, -1, -1, mostClass);
+    std::cout << "most seen class: " << mostClass << std::endl;
+    return decisionNode;
+}

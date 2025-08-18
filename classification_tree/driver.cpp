@@ -19,14 +19,17 @@ void printTopDown(ClassificationNode* node) {
 
 int main() {
     std::vector<std::vector<int>> features = {
-        {1, 50, 3},
-        {2, 51, 51},
-        {3, 52, 90},
-        {4, 60, 50},
-        {5, 69, 99}
+        {1, 1, 0},
+        {0, 3, 0},
+        {0, 1, 4},
+        {0, 5, 6},
+        {0, 6, 1},
+        {0, 11, 12},
+        {0, 15, 14},
+        {0, 13, 20}
     };
 
-    std::vector<int> results = {1, 1, 3, 2, 2};
+    std::vector<int> results = {1, 1, 1, 1, 1, 2, 2, 2};
 
     ClassificationTree testTree = ClassificationTree(features, results);
 

@@ -62,6 +62,9 @@
         "random": "cpp",
         "string_view": "cpp",
         "numbers": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "list": "cpp",
+        "xhash": "cpp",
+        "xtree": "cpp"
     }
 }
