@@ -10,8 +10,6 @@
 #include<iostream>
 
 /* Known Bugs
-caclGini COULD give wrong answers if classCounts does not represent all classes found in the split
-getClassCounts does not account for order that classes are seen but calcGini depends on the order matching
 pass cutFeatures to sortByFeature or else indices will be misaligned
 pass only sliced vectors to sortByfeature*/
 
@@ -243,8 +241,16 @@ float ClassificationTree::calcGini(std::vector<std::pair<int, int>> classCounts,
     float giniRight = 1.0f;
     if (rightCount > 0) {
         float sumSq = 0.0f;
-        for (size_t i = 0; i < classCounts.size(); i++) {
-            int rightClassCount = classCounts[i].second - splitCounts[i].second;
+        for (auto& p : classCounts) {
+            // find matching
+            int leftClassCount = 0;
+            for (auto& s: splitCounts) {
+                if (s.first == p.first) {
+                    leftClassCount = s.second;
+                    break;
+                }
+            }
+            int rightClassCount = p.second - leftClassCount;
             float pRight = rightClassCount / float(rightCount);
             sumSq += pRight * pRight;
         }
