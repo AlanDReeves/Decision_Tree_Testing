@@ -6,6 +6,8 @@ namespace py = pybind11;
 
 PYBIND11_MODULE(Classification_Tree, m) {
     py::class_<ClassificationTree>(m, "ClassificationTree")
-        .def(py::init<std::vector<std::vector<int>>, std::vector<int>>());
+        .def(py::init<std::vector<std::vector<int>>, std::vector<int>>())
+        .def("predict", &ClassificationTree::predict);
+
 }
 
