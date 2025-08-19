@@ -38,11 +38,11 @@ public:
         std::vector<std::pair<int, int>> splitCounts);
 
     std::tuple<int, float, int> findBestGiniVal(
-        std::vector<std::vector<int>> sortedFeatures, 
-        int featureNum, std::vector<int> sortedResults, 
-        std::vector<std::pair<int, int>> classCounts,
-        int leftIndex,
-        int rightIndex);
+    std::vector<std::vector<int>>& sortedFeatures, 
+    int featureNum, 
+    std::vector<int>& sortedResults, 
+    std::vector<std::pair<int, int>>& classCounts,
+    int leftIndex);
 
     ClassificationNode* makeTree(
         std::vector<std::vector<int>>& features, 

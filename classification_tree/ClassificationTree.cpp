@@ -9,6 +9,12 @@
 
 #include<iostream>
 
+/* Known Bugs
+caclGini COULD give wrong answers if classCounts does not represent all classes found in the split
+getClassCounts does not account for order that classes are seen but calcGini depends on the order matching
+pass cutFeatures to sortByFeature or else indices will be misaligned
+pass only sliced vectors to sortByfeature*/
+
 ClassificationTree::ClassificationTree(std::vector<std::vector<int>> features, std::vector<int> results) {
     std::cout << "constructor called" << std::endl;
     int numFeatures = features[0].size();
@@ -61,7 +67,7 @@ ClassificationNode* ClassificationTree::makeTree(
 
         std::cout<< "Best feature found to be " << bestFeatureNum << std::endl;
 
-        if (bestIndex == -1 || bestFeatureNum == -1) {
+        if (bestIndex == -1 || bestFeatureNum == -1 || bestValueNum == -999) {
             // base case - no further split is viable
             ClassificationNode* leaf = makeSinglePredictionNode(sorted.first, sorted.second, leftIndex, rightIndex);
             return leaf;
@@ -118,8 +124,12 @@ std::vector<std::tuple<int, float, int, int>> ClassificationTree::scoreFeatures(
             } else {
                 std::cout << "scoreFeatures loop: i = " << i << std::endl;
                 std::pair<std::vector<std::vector<int>>, std::vector<int>> sortResults = SortByFeature(features, i, results, 0, results.size() - 1);// sort by that feature
-                std::vector<std::pair<int, int>> classCounts = getClassCounts(sortResults.second);// generate class counts
-                std::tuple<int, float, int> giniScore = findBestGiniVal(sortResults.first, i, sortResults.second, classCounts, leftIndex, rightIndex); // calculate best gini
+
+                std::vector<int> cutResults = std::vector(sortResults.second.begin() + leftIndex, sortResults.second.begin() + rightIndex + 1);
+                std::vector<std::vector<int>> cutFeatures = std::vector<std::vector<int>>(sortResults.first.begin() + leftIndex, sortResults.first.begin() + rightIndex + 1);
+
+                std::vector<std::pair<int, int>> classCounts = getClassCounts(cutResults);// generate class counts
+                std::tuple<int, float, int> giniScore = findBestGiniVal(cutFeatures, i, cutResults, classCounts, leftIndex); // calculate best gini
                 // giniScore tuple - {bestValue, bestGini, bestIndex}
 
                 std::tuple<int, float, int, int> vectorTuple = std::make_tuple(std::get<0>(giniScore), std::get<1>(giniScore), i, std::get<2>(giniScore));
@@ -211,27 +221,49 @@ std::pair<std::vector<std::vector<int>>, std::vector<int>> ClassificationTree::S
 }
 
 float ClassificationTree::calcGini(std::vector<std::pair<int, int>> classCounts, std::vector<std::pair<int, int>> splitCounts) {
-    float leftPi = 0;
-    float rightPi = 0;
-    int splitCountsSize = int(splitCounts.size());
-    for (int i = 0; i < splitCountsSize; i++) {
-        int leftCount = splitCounts[i].second;
-        int totalCount = classCounts[i].second;
-        int rightCount = totalCount - leftCount;
+    int totalCount = 0;
+    for (auto& p: classCounts) totalCount += p.second;
 
-        leftPi += std::pow((leftCount / float(totalCount)), 2); // fraction of class in left squared
-        rightPi += std::pow((rightCount / float(totalCount)), 2); // fraction of class in right squared
+    int leftCount = 0;
+    for (auto& p: splitCounts) leftCount += p.second;
+    int rightCount = totalCount - leftCount;
+
+    // calculate left gini
+    float giniLeft = 1.0f;
+    if (leftCount > 0) {
+        float sumSq = 0.0f;
+        for (auto& p : splitCounts) {
+            float pLeft = p.second / float(leftCount);
+            sumSq += pLeft * pLeft;
+        }
+        giniLeft = 1.0f - sumSq;
     }
-    return leftPi + rightPi;
+
+    // calculate right side gini
+    float giniRight = 1.0f;
+    if (rightCount > 0) {
+        float sumSq = 0.0f;
+        for (size_t i = 0; i < classCounts.size(); i++) {
+            int rightClassCount = classCounts[i].second - splitCounts[i].second;
+            float pRight = rightClassCount / float(rightCount);
+            sumSq += pRight * pRight;
+        }
+        giniRight = 1.0f - sumSq;
+    }
+
+    // find weighted average
+    float avg = (leftCount * giniLeft + rightCount * giniRight) / float(totalCount);
+    return avg;
 }
 
 std::tuple<int, float, int> ClassificationTree::findBestGiniVal(
-    std::vector<std::vector<int>> sortedFeatures, 
+    std::vector<std::vector<int>>& sortedFeatures, 
     int featureNum, 
-    std::vector<int> sortedResults, 
-    std::vector<std::pair<int, int>> classCounts,
-    int leftIndex,
-    int rightIndex) {
+    std::vector<int>& sortedResults, 
+    std::vector<std::pair<int, int>>& classCounts,
+    int leftIndex) {
+    
+    int sliceSize = sortedResults.size();
     
     // initialize starting gini score and feature value
     float bestGini = 999.0;
@@ -241,40 +273,52 @@ std::tuple<int, float, int> ClassificationTree::findBestGiniVal(
     // set up class split counts for iterative Gini counting
         std::vector<std::pair<int, int>> splitCounts;
         int classCountsSize = int(classCounts.size());
-        for (int i = 0; i < classCountsSize; i++) {
-            int cls = classCounts[i].first;
-            splitCounts.push_back(std::make_pair(cls, 0)); // start counts for all classes at 0
+        for (auto& p : classCounts) {
+            splitCounts.push_back({p.first, 0}); // start counts for all classes at 0
         }
     // iterate through feature values for featureNum
-    int splitSize = rightIndex - leftIndex + 1;
-    int splitCountsSize = int(splitCounts.size());
+    if (sliceSize == 1) {
+        float gini = calcGini(classCounts, splitCounts);
+        if (gini < bestGini) {
+            bestGini = gini;
+            bestValue = sortedFeatures[0][featureNum];
+            bestIndex = 0;
+        }
+    }
 
-    for (int i = leftIndex + 1; i < rightIndex + 1; i++) {
-        // TODO: this does not consider not splitting at all. Fix that when able
-
-        // add each class passed to class count
+    for (int i = 0; i < sliceSize; i++) {
         int classSeen = sortedResults[i];
-        for (int j = 0; j < splitCountsSize; j++) { // iterating through to find class values in case they do not match index
-            if (splitCounts[j].first == classSeen) {
-                splitCounts[j].second++;
+
+        for (auto& sc : splitCounts) {
+            if (sc.first == classSeen) {
+                sc.second++;
+                break;
             }
         }
 
-        // when feature values are not equal, calculate gini for splitting there
-        if (sortedFeatures[i - 1][featureNum] != sortedFeatures[i][featureNum]) {
-            float splitGini = calcGini(classCounts, splitCounts);
-
-            if (splitGini < bestGini) {
-                // record best score and value at best score
-                bestGini = splitGini;
+        // compute gini if feature values changed
+        if (i > 0) {
+            if (sortedFeatures[i - 1][featureNum] != sortedFeatures[i][featureNum]) {
+                float gini = calcGini(classCounts, splitCounts);
+                if (gini < bestGini) {
+                    bestGini = gini;
+                    bestValue = sortedFeatures[i][featureNum];
+                    bestIndex = i;
+                }
+            }
+        } else { // only used when i is 0, so that splitting on index 0 can be considered
+            float gini = calcGini(classCounts, splitCounts);
+            if (gini < bestGini) {
+                bestGini = gini;
                 bestValue = sortedFeatures[i][featureNum];
                 bestIndex = i;
             }
         }
     }
-    // return feature value at best split
-    std::cout << "feature number: " << featureNum << " best gini score: " << bestGini << std::endl;
-    return std::make_tuple(bestValue, bestGini, bestIndex);
+
+    std::cout << "bestValue: " << bestValue << " bestGini: " << bestGini << std::endl;
+    return {bestValue, bestGini, leftIndex + bestIndex};
+
 }
 
 ClassificationNode* ClassificationTree::getRoot() {
@@ -330,6 +374,9 @@ void ClassificationTree::makePredictionNodes(
         }
 
         std::cout << "mostLeftClass: " << mostLeftClass << " mostRightClass: " << mostRightClass << std::endl;
+
+        if (mostLeftClass == -1 && mostRightClass != -1) mostLeftClass = mostRightClass;
+        if (mostRightClass == -1 && mostLeftClass != -1) mostRightClass = mostLeftClass;
 
         // create prediction nodes
         ClassificationNode* leftPred = new ClassificationNode(nullptr, nullptr, -1, -1, mostLeftClass);
