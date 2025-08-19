@@ -8,6 +8,8 @@
 #include<unordered_map>
 
 ClassificationTree::ClassificationTree(std::vector<std::vector<int>> features, std::vector<int> results) {
+    if (!isValidData(features, results)) return; // return early if validation doesn't pass
+
     std::set<int> featuresUsed;
     int size = results.size();
 
@@ -398,4 +400,21 @@ ClassificationNode* ClassificationTree::makeSinglePredictionNode(
 
     ClassificationNode* decisionNode = new ClassificationNode(nullptr, nullptr, -1, -1, mostClass);
     return decisionNode;
+}
+
+bool ClassificationTree::isValidData(std::vector<std::vector<int>>& features, std::vector<int>& results) {
+    int featuresSize = features.size(), resultsSize = results.size();
+
+    if (featuresSize != resultsSize) return false; // check if every features set has a result
+
+    int numFeatures = features[0].size(); // check passed data values
+    for (int i = 0; i < featuresSize; i++) {
+        if (results[i] < 0) return false; // check if any class values below 0 exist (breaks logic)
+        if (int(features[i].size()) < numFeatures) return false; // check if any feature set is missing features
+        for (int j = 0; j < numFeatures; j++) {
+            if (features[i][j] < 0) return false; // check if any features have negative value (breaks internal logic)
+        }
+    }
+
+    return true;
 }

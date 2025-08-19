@@ -59,6 +59,8 @@ private:
     int leftIndex, 
     int rightIndex);
 
+    bool isValidData(std::vector<std::vector<int>>& features, std::vector<int>& results);
+
 public:
     ClassificationTree(
         std::vector<std::vector<int>> features, 
