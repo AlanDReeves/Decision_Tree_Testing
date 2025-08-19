@@ -39,6 +39,8 @@ int main() {
 
     ClassificationNode* cursor = testTree.getRoot();
     printTopDown(cursor);
+
+    std::cout << "vector prediction: " << testTree.predict({0, 13, 20}) << std::endl;
     
 
     return 1;

@@ -15,9 +15,9 @@ public:
         std::vector<int> results);
 
     std::pair<std::vector<std::vector<int>>, std::vector<int>> SortByFeature(
-    std::vector<std::vector<int>>& features, 
+    std::vector<std::vector<int>> features, 
     int featureNum, 
-    std::vector<int>& results,
+    std::vector<int> results,
     int left,
     int right);
 
