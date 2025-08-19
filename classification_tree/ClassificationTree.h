@@ -9,19 +9,13 @@ class ClassificationTree
 {
 private:
     ClassificationNode* root;
-public:
-    ClassificationTree(
-        std::vector<std::vector<int>> features, 
-        std::vector<int> results);
 
     std::pair<std::vector<std::vector<int>>, std::vector<int>> SortByFeature(
-    std::vector<std::vector<int>> features, 
-    int featureNum, 
-    std::vector<int> results,
-    int left,
-    int right);
-
-    int predict(std::vector<int>);
+        std::vector<std::vector<int>> features, 
+        int featureNum, 
+        std::vector<int> results,
+        int left,
+        int right);
 
     std::vector<std::tuple<int, float, int, int>> scoreFeatures(
         std::vector<std::vector<int>>& features, 
@@ -38,11 +32,11 @@ public:
         std::vector<std::pair<int, int>> splitCounts);
 
     std::tuple<int, float, int> findBestGiniVal(
-    std::vector<std::vector<int>>& sortedFeatures, 
-    int featureNum, 
-    std::vector<int>& sortedResults, 
-    std::vector<std::pair<int, int>>& classCounts,
-    int leftIndex);
+        std::vector<std::vector<int>>& sortedFeatures, 
+        int featureNum, 
+        std::vector<int>& sortedResults, 
+        std::vector<std::pair<int, int>>& classCounts,
+        int leftIndex);
 
     ClassificationNode* makeTree(
         std::vector<std::vector<int>>& features, 
@@ -50,7 +44,6 @@ public:
         std::set<int> featuresUsed, 
         int leftIndex, 
         int rightIndex);
-        ClassificationNode* getRoot();
 
     void makePredictionNodes(
         std::vector<std::vector<int>>& features, 
@@ -65,5 +58,15 @@ public:
     std::vector<int>& results, 
     int leftIndex, 
     int rightIndex);
+
+public:
+    ClassificationTree(
+        std::vector<std::vector<int>> features, 
+        std::vector<int> results);
+
+    int predict(std::vector<int>);
+
+    ClassificationNode* getRoot();
+    
 };
 #endif
